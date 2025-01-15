@@ -120,25 +120,32 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
     return 0;
 }
 
+static bool SendHeartbeat()
+{
+    if (!g_PipeServer.SendMessageToClient(PredCommon::MessageType::LOG, "[LOG] [INF] [Payload] Payload heartbeat\n"))
+    {
+        DWORD err = GetLastError();
+        if (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA)
+        {
+            LogError("[Payload] Loader disconnected, shutting down...");
+            return false;
+        }
+    }
+    return true;
+}
+
 static void MainLoop()
 {
     while (g_Running && !g_Unloading)
     {
-        // Try to send a heartbeat message
-        // I hardcode the log inf stuff cause it looks nicer :)
-        if (!g_PipeServer.SendMessageToClient(PredCommon::MessageType::LOG, "[LOG] [INF] [Payload] Payload heartbeat\n"))
+        if (!SendHeartbeat())
         {
-            DWORD err = GetLastError();
-            if (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA)
-            {
-                LogError("[Payload] Loader disconnected, shutting down...");
-                g_Running = false;
-                g_Unloading = true;
-                break;
-            }
+            g_Running = false;
+            g_Unloading = true;
+            break;
         }
 
-        Sleep(1000);  // Send heartbeat every second
+        Sleep(1000);
     }
     
     LogInfo("[Payload] Exiting main loop.");
