@@ -25,15 +25,18 @@ bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
         {
             std::string playerName = PlayerState->GetPlayerName().ToString();
             auto params = static_cast<SDK::Params::PredInventoryComponent_Server_TryBuyItem*>(Parms);
-            std::string itemId = std::to_string(reinterpret_cast<uintptr_t>(params->Item));
+            auto item = params->Item;
 
-            // Log to file
-            LogInfo("PURCHASE_ATTEMPT:%s:%s", playerName.c_str(), itemId.c_str());
+            std::int32_t itemId = item->ItemId;
+            std::string itemName = item->ItemName.ToString();
 
             // Send to websocket
             json data = {
                 {"player_name", playerName},
-                {"item_id", itemId}
+                {"item", {
+                    {"id", itemId},
+                    {"name", itemName}
+                }}
             };
             g_WebSocketServer->BroadcastEvent("purchase_attempt", data);
         }

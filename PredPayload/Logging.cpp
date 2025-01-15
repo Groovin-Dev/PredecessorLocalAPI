@@ -7,9 +7,9 @@
 #include "CommonConstants.h" // For DEBUG_CONSOLE
 using namespace PredCommon;
 
-static bool                 g_LoggerInitialized = false;
-static NamedPipeServer*     g_LoggerPipe = nullptr;
-static CRITICAL_SECTION     g_LogLock; // for thread safety
+static bool g_LoggerInitialized = false;
+static NamedPipeServer* g_LoggerPipe = nullptr;
+static CRITICAL_SECTION g_LogLock; // for thread safety
 
 bool InitializeLogger()
 {

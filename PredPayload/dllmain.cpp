@@ -5,8 +5,8 @@
 DWORD WINAPI PayloadWorkerThread(LPVOID lpParam);
 
 // Global flags
-static std::atomic_bool g_Unloading{ false };
-static HMODULE          g_hModule = nullptr;
+static std::atomic_bool g_Unloading{false};
+static HMODULE g_hModule = nullptr;
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID /*lpReserved*/)
 {
