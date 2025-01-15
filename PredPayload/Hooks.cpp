@@ -7,49 +7,44 @@
 #include "SDK/Predecessor_classes.hpp"
 #include "SDK/Predecessor_parameters.hpp"
 
+#include "WebSocketServer.h"
+extern std::unique_ptr<WebSocketServer> g_WebSocketServer;
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 using namespace SDK;
 using namespace SDK::Params;
 
+bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
+{
+    auto InventoryComponent = static_cast<SDK::UPredInventoryComponent*>(Object);
+    if (InventoryComponent && InventoryComponent->GetOwner())
+    {
+        if (auto PlayerState = static_cast<SDK::ABasePlayerState*>(InventoryComponent->GetOwner()))
+        {
+            std::string playerName = PlayerState->GetPlayerName().ToString();
+            auto params = static_cast<SDK::Params::PredInventoryComponent_Server_TryBuyItem*>(Parms);
+            std::string itemId = std::to_string(reinterpret_cast<uintptr_t>(params->Item));
+
+            // Log to file
+            LogInfo("PURCHASE_ATTEMPT:%s:%s", playerName.c_str(), itemId.c_str());
+
+            // Send to websocket
+            json data = {
+                {"player_name", playerName},
+                {"item_id", itemId}
+            };
+            g_WebSocketServer->BroadcastEvent("purchase_attempt", data);
+        }
+    }
+    return true; // proceed
+}
+
 void InstallHooks()
 {
-    // Enable hooking system
     KPE::Enable();
-
-    // 1) Hook: Server_TryBuyItem
-    KPE_AddHook("Function Predecessor.PredInventoryComponent.Server_TryBuyItem", {
-        auto InventoryComponent = static_cast<SDK::UPredInventoryComponent*>(Object);
-        if (InventoryComponent && InventoryComponent->GetOwner())
-        {
-            if (auto PlayerState = static_cast<SDK::ABasePlayerState*>(InventoryComponent->GetOwner()))
-            {
-                std::string playerName = PlayerState->GetPlayerName().ToString();
-                auto params = static_cast<SDK::Params::PredInventoryComponent_Server_TryBuyItem*>(Parms);
-                std::string itemId = std::to_string(reinterpret_cast<uintptr_t>(params->Item));
-
-                // Just log it
-                LogInfo("PURCHASE_ATTEMPT:%s:%s", playerName.c_str(), itemId.c_str());
-            }
-        }
-        return true; // proceed
-        });
-
-    // 2) Hook: Server_TryBuyItemPartsRecursive
-    KPE_AddHook("Function Predecessor.PredInventoryComponent.Server_TryBuyItemPartsRecursive", {
-        auto InventoryComponent = static_cast<SDK::UPredInventoryComponent*>(Object);
-        if (InventoryComponent && InventoryComponent->GetOwner())
-        {
-            if (auto PlayerState = static_cast<SDK::ABasePlayerState*>(InventoryComponent->GetOwner()))
-            {
-                std::string playerName = PlayerState->GetPlayerName().ToString();
-                auto params = static_cast<SDK::Params::PredInventoryComponent_Server_TryBuyItemPartsRecursive*>(Parms);
-                std::string itemId = std::to_string(reinterpret_cast<uintptr_t>(params->Item));
-
-                LogInfo("RECURSIVE_PURCHASE_ATTEMPT:%s:%s", playerName.c_str(), itemId.c_str());
-            }
-        }
-        return true; // proceed
-        });
-
+    KPE_AddHook("Function Predecessor.PredInventoryComponent.Server_TryBuyItem", { return OnTryBuyItem(Object, Function, Parms); });
     LogInfo("Hooks installed.");
 }
 

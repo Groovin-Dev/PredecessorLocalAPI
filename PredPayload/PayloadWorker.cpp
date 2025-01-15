@@ -14,12 +14,15 @@
 
 #include "Logging.h"
 #include "Hooks.h"
+#include "WebSocketServer.h"
 
 // Static or global flags
 static std::atomic_bool             g_Running = true;
 static std::atomic_bool             g_Unloading = false;
 static PredCommon::NamedPipeServer  g_PipeServer;
 static HANDLE                       g_ConsoleHandle = nullptr;
+// static std::unique_ptr<WebSocketServer> g_WebSocketServer;
+std::unique_ptr<WebSocketServer> g_WebSocketServer;
 
 // Forward declarations
 static void MainLoop();
@@ -96,23 +99,33 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
     SetLoggerPipe(&g_PipeServer);
     LogInfo("[Payload] Pipe connection established for logging");
 
-    // 6) Initialize engine access
+    // 6) Initialize WebSocket server
+    LogInfo("[Payload] Starting WebSocket server...");
+    g_WebSocketServer = std::make_unique<WebSocketServer>();
+    if (!g_WebSocketServer->Start()) {
+        LogError("[Payload] Failed to start WebSocket server");
+        CleanupAndExit();
+        return 0;
+    }
+    LogInfo("[Payload] WebSocket server started");
+
+    // 7) Initialize engine access
     LogInfo("[Payload] Initializing engine access...");
     SDK::UWorld* world = SDK::UWorld::GetWorld();
     SDK::UGameEngine* gameEngine = SDK::UGameEngine::GetEngine();
     LogInfo("[Payload] UWorld at 0x%p", world);
     LogInfo("[Payload] UGameEngine at 0x%p", gameEngine);
 
-    // 7) Install hooks
+    // 8) Install hooks
     LogInfo("[Payload] Installing hooks...");
     InstallHooks();
     LogInfo("[Payload] Hooks installation complete");
 
-    // 8) Main loop
+    // 9) Main loop
     LogInfo("[Payload] Entering main loop");
     MainLoop();
 
-    // 9) Cleanup
+    // 10) Cleanup
     LogInfo("[Payload] Beginning cleanup...");
     CloseHandle(readyEvent);
     CleanupAndExit();
@@ -173,6 +186,12 @@ static void CleanupAndExit()
 
     LogInfo("[Payload] Shutting down logger...");
     ShutdownLogger();
+
+    if (g_WebSocketServer) {
+        LogInfo("[Payload] Stopping WebSocket server...");
+        g_WebSocketServer->Stop();
+        g_WebSocketServer.reset();
+    }
 
     if (g_ConsoleHandle)
     {
