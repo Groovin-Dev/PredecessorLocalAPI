@@ -21,7 +21,6 @@ static std::atomic_bool g_Running = true;
 static std::atomic_bool g_Unloading = false;
 static PredCommon::NamedPipeServer g_PipeServer;
 static HANDLE g_ConsoleHandle = nullptr;
-// static std::unique_ptr<WebSocketServer> g_WebSocketServer;
 std::unique_ptr<WebSocketServer> g_WebSocketServer;
 
 // Forward declarations
