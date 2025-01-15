@@ -8,7 +8,7 @@
 #include "SDK/Predecessor_parameters.hpp"
 
 #include "WebSocketServer.h"
-extern std::unique_ptr<WebSocketServer> g_WebSocketServer;
+extern std::shared_ptr<WebSocketServer> g_WebSocketServer;
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;

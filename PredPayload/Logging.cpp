@@ -82,3 +82,21 @@ void LogError(const char* fmt, ...)
     LogPrintf("[LOG] [ERR] ", fmt, args);
     va_end(args);
 }
+
+// Convenience for warning-level logs
+void LogWarning(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    LogPrintf("[LOG] [WRN] ", fmt, args);
+    va_end(args);
+}
+
+// Convenience for debug-level logs
+void LogDebug(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    LogPrintf("[LOG] [DBG] ", fmt, args);
+    va_end(args);
+}

@@ -18,3 +18,5 @@ void LogPrintf(const char* prefix, const char* fmt, va_list args);
 // Convenience wrappers
 void LogInfo(const char* fmt, ...);
 void LogError(const char* fmt, ...);
+void LogWarning(const char* fmt, ...);
+void LogDebug(const char* fmt, ...);

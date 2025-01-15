@@ -3,11 +3,6 @@
 #include <thread>
 #include <atomic>
 #include <string>
-#include <sstream>
-
-#include "KPE_HookLib/KEI_PE_HOOK.hpp"
-#include "SDK/Engine_classes.hpp"
-#include "SDK/Engine_parameters.hpp"
 
 #include "NamedPipeServer.h"
 #include "CommonConstants.h"
@@ -15,18 +10,22 @@
 #include "Logging.h"
 #include "Hooks.h"
 #include "WebSocketServer.h"
+#include "GameStateManager.h"
 
 // Static or global flags
 static std::atomic_bool g_Running = true;
 static std::atomic_bool g_Unloading = false;
 static PredCommon::NamedPipeServer g_PipeServer;
 static HANDLE g_ConsoleHandle = nullptr;
-std::unique_ptr<WebSocketServer> g_WebSocketServer;
+std::shared_ptr<WebSocketServer> g_WebSocketServer;
+std::unique_ptr<GameStateManager> g_GameStateManager;
 
 // Forward declarations
 static void MainLoop();
 static BOOL WINAPI ConsoleHandler(DWORD ctrlType);
 static void CleanupAndExit();
+
+using namespace SDK;
 
 DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
 {
@@ -100,7 +99,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
 
     // 6) Initialize WebSocket server
     LogInfo("[Payload] Starting WebSocket server...");
-    g_WebSocketServer = std::make_unique<WebSocketServer>();
+    g_WebSocketServer = std::make_shared<WebSocketServer>();
     if (!g_WebSocketServer->Start())
     {
         LogError("[Payload] Failed to start WebSocket server");
@@ -108,6 +107,10 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         return 0;
     }
     LogInfo("[Payload] WebSocket server started");
+
+    // Initialize GameStateManager
+    g_GameStateManager = std::make_unique<GameStateManager>();
+    LogInfo("[Payload] Game State Manager initialized");
 
     // 7) Initialize engine access
     LogInfo("[Payload] Initializing engine access...");
@@ -158,6 +161,10 @@ static void MainLoop()
             break;
         }
 
+        if (g_GameStateManager) {
+            g_GameStateManager->Update();
+        }
+
         Sleep(1000);
     }
 
@@ -186,6 +193,12 @@ static void CleanupAndExit()
 
     LogInfo("[Payload] Shutting down logger...");
     ShutdownLogger();
+
+    if (g_GameStateManager)
+    {
+        LogInfo("[Payload] Cleaning up Game State Manager...");
+        g_GameStateManager.reset();
+    }
 
     if (g_WebSocketServer)
     {
