@@ -6,7 +6,8 @@
 
 using json = nlohmann::json;
 
-class WebSocketServer {
+class WebSocketServer
+{
 public:
     WebSocketServer();
     ~WebSocketServer();
@@ -19,4 +20,4 @@ private:
     struct ServerImpl;
     std::unique_ptr<ServerImpl> m_impl;
     bool m_running;
-}; 
+};

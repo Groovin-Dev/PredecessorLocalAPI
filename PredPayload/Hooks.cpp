@@ -18,13 +18,13 @@ using namespace SDK::Params;
 
 bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
 {
-    auto InventoryComponent = static_cast<SDK::UPredInventoryComponent*>(Object);
+    auto InventoryComponent = static_cast<UPredInventoryComponent*>(Object);
     if (InventoryComponent && InventoryComponent->GetOwner())
     {
-        if (auto PlayerState = static_cast<SDK::ABasePlayerState*>(InventoryComponent->GetOwner()))
+        if (auto PlayerState = static_cast<ABasePlayerState*>(InventoryComponent->GetOwner()))
         {
             std::string playerName = PlayerState->GetPlayerName().ToString();
-            auto params = static_cast<SDK::Params::PredInventoryComponent_Server_TryBuyItem*>(Parms);
+            auto params = static_cast<PredInventoryComponent_Server_TryBuyItem*>(Parms);
             auto item = params->Item;
 
             std::int32_t itemId = item->ItemId;
@@ -33,10 +33,12 @@ bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
             // Send to websocket
             json data = {
                 {"player_name", playerName},
-                {"item", {
-                    {"id", itemId},
-                    {"name", itemName}
-                }}
+                {
+                    "item", {
+                        {"id", itemId},
+                        {"name", itemName}
+                    }
+                }
             };
             g_WebSocketServer->BroadcastEvent("purchase_attempt", data);
         }
@@ -47,7 +49,8 @@ bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
 void InstallHooks()
 {
     KPE::Enable();
-    KPE_AddHook("Function Predecessor.PredInventoryComponent.Server_TryBuyItem", { return OnTryBuyItem(Object, Function, Parms); });
+    KPE_AddHook("Function Predecessor.PredInventoryComponent.Server_TryBuyItem",
+                { return OnTryBuyItem(Object, Function, Parms); });
     LogInfo("Hooks installed.");
 }
 

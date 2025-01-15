@@ -17,10 +17,10 @@
 #include "WebSocketServer.h"
 
 // Static or global flags
-static std::atomic_bool             g_Running = true;
-static std::atomic_bool             g_Unloading = false;
-static PredCommon::NamedPipeServer  g_PipeServer;
-static HANDLE                       g_ConsoleHandle = nullptr;
+static std::atomic_bool g_Running = true;
+static std::atomic_bool g_Unloading = false;
+static PredCommon::NamedPipeServer g_PipeServer;
+static HANDLE g_ConsoleHandle = nullptr;
 // static std::unique_ptr<WebSocketServer> g_WebSocketServer;
 std::unique_ptr<WebSocketServer> g_WebSocketServer;
 
@@ -69,7 +69,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
     LogInfo("[Payload] Creating ready event...");
     SECURITY_DESCRIPTOR sd;
     InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE);
+    SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE);
 
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof(sa);
@@ -83,12 +83,12 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         CleanupAndExit();
         return 0;
     }
-    SetEvent(readyEvent);  // Signal we're ready
+    SetEvent(readyEvent); // Signal we're ready
     LogInfo("[Payload] Ready event set");
 
     // 5) Wait for client connection
     LogInfo("[Payload] Waiting for client...");
-    if (!g_PipeServer.WaitForClient(5000))  // 5 second timeout
+    if (!g_PipeServer.WaitForClient(5000)) // 5 second timeout
     {
         LogError("[Payload] Timeout waiting for client.");
         CloseHandle(readyEvent);
@@ -102,7 +102,8 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
     // 6) Initialize WebSocket server
     LogInfo("[Payload] Starting WebSocket server...");
     g_WebSocketServer = std::make_unique<WebSocketServer>();
-    if (!g_WebSocketServer->Start()) {
+    if (!g_WebSocketServer->Start())
+    {
         LogError("[Payload] Failed to start WebSocket server");
         CleanupAndExit();
         return 0;
@@ -111,8 +112,8 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
 
     // 7) Initialize engine access
     LogInfo("[Payload] Initializing engine access...");
-    SDK::UWorld* world = SDK::UWorld::GetWorld();
-    SDK::UGameEngine* gameEngine = SDK::UGameEngine::GetEngine();
+    UWorld* world = UWorld::GetWorld();
+    UGameEngine* gameEngine = UGameEngine::GetEngine();
     LogInfo("[Payload] UWorld at 0x%p", world);
     LogInfo("[Payload] UGameEngine at 0x%p", gameEngine);
 
@@ -129,7 +130,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
     LogInfo("[Payload] Beginning cleanup...");
     CloseHandle(readyEvent);
     CleanupAndExit();
-    
+
     return 0;
 }
 
@@ -160,7 +161,7 @@ static void MainLoop()
 
         Sleep(1000);
     }
-    
+
     LogInfo("[Payload] Exiting main loop.");
     g_Running = false;
 }
@@ -187,7 +188,8 @@ static void CleanupAndExit()
     LogInfo("[Payload] Shutting down logger...");
     ShutdownLogger();
 
-    if (g_WebSocketServer) {
+    if (g_WebSocketServer)
+    {
         LogInfo("[Payload] Stopping WebSocket server...");
         g_WebSocketServer->Stop();
         g_WebSocketServer.reset();
@@ -225,11 +227,11 @@ static BOOL WINAPI ConsoleHandler(DWORD ctrlType)
         // Initiate graceful shutdown
         g_Running = false;
         g_Unloading = true;
-        
-        // Give the main loop a little time to exit gracefully
+
+    // Give the main loop a little time to exit gracefully
         Sleep(500);
 
-        // Force cleanup if needed
+    // Force cleanup if needed
         CleanupAndExit();
         return TRUE;
     default:
