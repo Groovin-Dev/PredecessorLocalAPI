@@ -13,6 +13,8 @@ This setup uses three main components:
 1. Clone this repo locally:
    ```bash
    git clone https://github.com/Groovin-Dev/PredecessorLocalAPI
+   git submodule init
+   git submodule update
    ```
 2. Clone Dumper-7 and generate the SDK (See [Dumper-7](https://github.com/Encryqed/Dumper-7) on how to do this)
     a. Once generated, copy the files from `CppSDK` to `PredPayload/SDK`
