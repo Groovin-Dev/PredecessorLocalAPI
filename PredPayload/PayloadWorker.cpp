@@ -29,109 +29,124 @@ using namespace SDK;
 
 DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
 {
-    // 1) Console setup
-    if (PredCommon::DEBUG_CONSOLE)
+    try 
     {
-        AllocConsole();
-        FILE* dummy;
-        freopen_s(&dummy, "CONOUT$", "w", stdout);
-        freopen_s(&dummy, "CONOUT$", "w", stderr);
-        SetConsoleTitle(L"Predecessor Payload Debug Console");
-        setvbuf(stdout, nullptr, _IONBF, 0);
-        setvbuf(stderr, nullptr, _IONBF, 0);
+        // 1) Console setup
+        if (PredCommon::DEBUG_CONSOLE)
+        {
+            AllocConsole();
+            FILE* dummy;
+            freopen_s(&dummy, "CONOUT$", "w", stdout);
+            freopen_s(&dummy, "CONOUT$", "w", stderr);
+            SetConsoleTitle(L"Predecessor Payload Debug Console");
+            setvbuf(stdout, nullptr, _IONBF, 0);
+            setvbuf(stderr, nullptr, _IONBF, 0);
 
-        // Store console handle and set up control handler
-        g_ConsoleHandle = GetConsoleWindow();
-        SetConsoleCtrlHandler(ConsoleHandler, TRUE);
-    }
+            // Store console handle and set up control handler
+            g_ConsoleHandle = GetConsoleWindow();
+            SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+        }
 
-    // 2) Initialize logging (console only for now)
-    if (!InitializeLogger())
-    {
-        printf("Failed to initialize logger\n");
-        return 0;
-    }
-    LogInfo("[Payload] Logger initialized");
+        // 2) Initialize logging (console only for now)
+        if (!InitializeLogger())
+        {
+            printf("Failed to initialize logger\n");
+            return 0;
+        }
+        LogInfo("[Payload] Logger initialized");
 
-    // 3) Create pipe server first
-    LogInfo("[Payload] Creating named pipe server...");
-    if (!g_PipeServer.Create(PredCommon::PIPE_NAME))
-    {
-        LogError("[Payload] Failed to create pipe server. Exiting.");
-        CleanupAndExit();
-        return 0;
-    }
-    LogInfo("[Payload] Pipe created.");
+        // 3) Create pipe server first
+        LogInfo("[Payload] Creating named pipe server...");
+        if (!g_PipeServer.Create(PredCommon::PIPE_NAME))
+        {
+            LogError("[Payload] Failed to create pipe server. Exiting.");
+            CleanupAndExit();
+            return 0;
+        }
+        LogInfo("[Payload] Pipe created.");
 
-    // 4) Create and set the ready event
-    LogInfo("[Payload] Creating ready event...");
-    SECURITY_DESCRIPTOR sd;
-    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE);
+        // 4) Create and set the ready event
+        LogInfo("[Payload] Creating ready event...");
+        SECURITY_DESCRIPTOR sd;
+        InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+        SetSecurityDescriptorDacl(&sd, TRUE, nullptr, FALSE);
 
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(sa);
-    sa.lpSecurityDescriptor = &sd;
-    sa.bInheritHandle = FALSE;
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(sa);
+        sa.lpSecurityDescriptor = &sd;
+        sa.bInheritHandle = FALSE;
 
-    HANDLE readyEvent = CreateEventA(&sa, TRUE, FALSE, "Global\\PredecessorPayloadReady");
-    if (!readyEvent)
-    {
-        LogError("[Payload] Failed to create ready event. Error: %d", GetLastError());
-        CleanupAndExit();
-        return 0;
-    }
-    SetEvent(readyEvent); // Signal we're ready
-    LogInfo("[Payload] Ready event set");
+        HANDLE readyEvent = CreateEventA(&sa, TRUE, FALSE, "Global\\PredecessorPayloadReady");
+        if (!readyEvent)
+        {
+            LogError("[Payload] Failed to create ready event. Error: %d", GetLastError());
+            CleanupAndExit();
+            return 0;
+        }
+        SetEvent(readyEvent); // Signal we're ready
+        LogInfo("[Payload] Ready event set");
 
-    // 5) Wait for client connection
-    LogInfo("[Payload] Waiting for client...");
-    if (!g_PipeServer.WaitForClient(5000)) // 5 second timeout
-    {
-        LogError("[Payload] Timeout waiting for client.");
+        // 5) Wait for client connection
+        LogInfo("[Payload] Waiting for client...");
+        if (!g_PipeServer.WaitForClient(5000)) // 5 second timeout
+        {
+            LogError("[Payload] Timeout waiting for client.");
+            CloseHandle(readyEvent);
+            CleanupAndExit();
+            return 0;
+        }
+        LogInfo("[Payload] Client connected to named pipe.");
+        SetLoggerPipe(&g_PipeServer);
+        LogInfo("[Payload] Pipe connection established for logging");
+
+        // 6) Initialize WebSocket server
+        LogInfo("[Payload] Starting WebSocket server...");
+        g_WebSocketServer = std::make_shared<WebSocketServer>();
+        if (!g_WebSocketServer->Start())
+        {
+            LogError("[Payload] Failed to start WebSocket server");
+            CleanupAndExit();
+            return 0;
+        }
+        LogInfo("[Payload] WebSocket server started");
+
+        // Initialize GameStateManager
+        g_GameStateManager = std::make_unique<GameStateManager>();
+        LogInfo("[Payload] Game State Manager initialized");
+
+        // 7) Initialize engine access
+        LogInfo("[Payload] Initializing engine access...");
+        UWorld* world = UWorld::GetWorld();
+        UGameEngine* gameEngine = UGameEngine::GetEngine();
+        LogInfo("[Payload] UWorld at 0x%p", world);
+        LogInfo("[Payload] UGameEngine at 0x%p", gameEngine);
+
+        // 8) Install hooks
+        LogInfo("[Payload] Installing hooks...");
+        InstallHooks();
+        LogInfo("[Payload] Hooks installation complete");
+
+        // 9) Main loop
+        LogInfo("[Payload] Entering main loop");
+        MainLoop();
+
+        // 10) Cleanup
+        LogInfo("[Payload] Beginning cleanup...");
         CloseHandle(readyEvent);
         CleanupAndExit();
-        return 0;
     }
-    LogInfo("[Payload] Client connected to named pipe.");
-    SetLoggerPipe(&g_PipeServer);
-    LogInfo("[Payload] Pipe connection established for logging");
-
-    // 6) Initialize WebSocket server
-    LogInfo("[Payload] Starting WebSocket server...");
-    g_WebSocketServer = std::make_shared<WebSocketServer>();
-    if (!g_WebSocketServer->Start())
+    catch (const std::exception& e)
     {
-        LogError("[Payload] Failed to start WebSocket server");
+        LogError("[Payload] Critical error occurred: %s", e.what());
         CleanupAndExit();
-        return 0;
+        return 1;
     }
-    LogInfo("[Payload] WebSocket server started");
-
-    // Initialize GameStateManager
-    g_GameStateManager = std::make_unique<GameStateManager>();
-    LogInfo("[Payload] Game State Manager initialized");
-
-    // 7) Initialize engine access
-    LogInfo("[Payload] Initializing engine access...");
-    UWorld* world = UWorld::GetWorld();
-    UGameEngine* gameEngine = UGameEngine::GetEngine();
-    LogInfo("[Payload] UWorld at 0x%p", world);
-    LogInfo("[Payload] UGameEngine at 0x%p", gameEngine);
-
-    // 8) Install hooks
-    LogInfo("[Payload] Installing hooks...");
-    InstallHooks();
-    LogInfo("[Payload] Hooks installation complete");
-
-    // 9) Main loop
-    LogInfo("[Payload] Entering main loop");
-    MainLoop();
-
-    // 10) Cleanup
-    LogInfo("[Payload] Beginning cleanup...");
-    CloseHandle(readyEvent);
-    CleanupAndExit();
+    catch (...)
+    {
+        LogError("[Payload] Unknown critical error occurred");
+        CleanupAndExit();
+        return 1;
+    }
 
     return 0;
 }

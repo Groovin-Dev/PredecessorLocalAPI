@@ -16,7 +16,7 @@ public:
 
 private:
     json GetCurrentGameState();
-    json GetPlayerState(SDK::ABasePlayerState* playerState);
+    json GetPlayerState(SDK::APredCharacter* character);
     json GetPlayerItems(SDK::UPredInventoryComponent* inventoryComponent);
     std::string GetItemSlotTypeString(SDK::EPredItemSlotType slotType);
     bool IsAbilityOnCooldown();
