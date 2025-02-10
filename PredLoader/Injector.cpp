@@ -83,7 +83,7 @@ namespace Injector
         WaitForSingleObject(hThread, INFINITE);
         CloseHandle(hThread);
 
-        // Free the memory we allocated (optional, though often done)
+        // Free the memory we allocated
         VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
 
         // Done

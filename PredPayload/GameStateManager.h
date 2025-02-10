@@ -7,7 +7,8 @@
 
 using json = nlohmann::json;
 
-class GameStateManager {
+class GameStateManager
+{
 public:
     GameStateManager();
     ~GameStateManager() = default;

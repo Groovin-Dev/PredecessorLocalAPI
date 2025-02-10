@@ -4,16 +4,15 @@
 #include <string>
 #include <cstdarg>
 
-#include "CommonConstants.h" // For DEBUG_CONSOLE
+#include "CommonConstants.h"
 using namespace PredCommon;
 
 static bool g_LoggerInitialized = false;
 static NamedPipeServer* g_LoggerPipe = nullptr;
-static CRITICAL_SECTION g_LogLock; // for thread safety
+static CRITICAL_SECTION g_LogLock;
 
 bool InitializeLogger()
 {
-    // Initialize a critical section for logging
     InitializeCriticalSection(&g_LogLock);
 
     g_LoggerInitialized = true;
@@ -23,9 +22,6 @@ bool InitializeLogger()
 void ShutdownLogger()
 {
     if (!g_LoggerInitialized) return;
-
-    // If we allocated a console in your worker code, we can free it here or there.
-    // This library doesn't allocate it directly, so we won't do it here.
 
     DeleteCriticalSection(&g_LogLock);
     g_LoggerInitialized = false;
@@ -38,7 +34,6 @@ void SetLoggerPipe(NamedPipeServer* pipe)
     LeaveCriticalSection(&g_LogLock);
 }
 
-// The low-level function that does the actual printing
 void LogPrintf(const char* prefix, const char* fmt, va_list args)
 {
     if (!g_LoggerInitialized) return;
@@ -46,7 +41,6 @@ void LogPrintf(const char* prefix, const char* fmt, va_list args)
     char buffer[1024];
     vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, fmt, args);
 
-    // Build final string with prefix
     std::string out = std::string(prefix) + buffer + "\n";
 
     EnterCriticalSection(&g_LogLock);
@@ -65,7 +59,6 @@ void LogPrintf(const char* prefix, const char* fmt, va_list args)
     LeaveCriticalSection(&g_LogLock);
 }
 
-// Convenience for info-level logs
 void LogInfo(const char* fmt, ...)
 {
     va_list args;
@@ -74,7 +67,6 @@ void LogInfo(const char* fmt, ...)
     va_end(args);
 }
 
-// Convenience for error-level logs
 void LogError(const char* fmt, ...)
 {
     va_list args;
@@ -83,7 +75,6 @@ void LogError(const char* fmt, ...)
     va_end(args);
 }
 
-// Convenience for warning-level logs
 void LogWarning(const char* fmt, ...)
 {
     va_list args;
@@ -92,7 +83,6 @@ void LogWarning(const char* fmt, ...)
     va_end(args);
 }
 
-// Convenience for debug-level logs
 void LogDebug(const char* fmt, ...)
 {
     va_list args;

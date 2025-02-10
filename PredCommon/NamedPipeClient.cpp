@@ -1,11 +1,11 @@
 #include "NamedPipeClient.h"
-#include <iostream>  // Optional for debug prints
+#include <iostream>
 
 namespace PredCommon
 {
     NamedPipeClient::NamedPipeClient()
         : m_Pipe(INVALID_HANDLE_VALUE),
-        m_Disconnecting(false)
+          m_Disconnecting(false)
     {
     }
 
@@ -20,10 +20,10 @@ namespace PredCommon
         m_Pipe = CreateFileA(
             pipeName,
             GENERIC_READ | GENERIC_WRITE,
-            0,             // no sharing
+            0, // no sharing
             nullptr,
             OPEN_EXISTING, // must exist
-            0,             // default attrs
+            0, // default attrs
             nullptr
         );
 
@@ -44,7 +44,7 @@ namespace PredCommon
     void NamedPipeClient::Disconnect()
     {
         if (m_Disconnecting.exchange(true))
-            return;  // already disconnecting
+            return;
 
         if (m_Pipe != INVALID_HANDLE_VALUE)
         {
@@ -67,7 +67,7 @@ namespace PredCommon
 
         struct PacketHeader
         {
-            uint8_t  msgType;
+            uint8_t msgType;
             uint32_t length;
         } header;
 

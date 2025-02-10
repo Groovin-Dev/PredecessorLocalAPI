@@ -12,7 +12,6 @@
 #include "WebSocketServer.h"
 #include "GameStateManager.h"
 
-// Static or global flags
 static std::atomic_bool g_Running = true;
 static std::atomic_bool g_Unloading = false;
 static PredCommon::NamedPipeServer g_PipeServer;
@@ -20,7 +19,6 @@ static HANDLE g_ConsoleHandle = nullptr;
 std::shared_ptr<WebSocketServer> g_WebSocketServer;
 std::unique_ptr<GameStateManager> g_GameStateManager;
 
-// Forward declarations
 static void MainLoop();
 static BOOL WINAPI ConsoleHandler(DWORD ctrlType);
 static void CleanupAndExit();
@@ -29,9 +27,9 @@ using namespace SDK;
 
 DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
 {
-    try 
+    try
     {
-        // 1) Console setup
+        // Console setup
         if (PredCommon::DEBUG_CONSOLE)
         {
             AllocConsole();
@@ -47,7 +45,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
             SetConsoleCtrlHandler(ConsoleHandler, TRUE);
         }
 
-        // 2) Initialize logging (console only for now)
+        // Initialize logging (console only for now)
         if (!InitializeLogger())
         {
             printf("Failed to initialize logger\n");
@@ -55,7 +53,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         }
         LogInfo("[Payload] Logger initialized");
 
-        // 3) Create pipe server first
+        // Create pipe server first
         LogInfo("[Payload] Creating named pipe server...");
         if (!g_PipeServer.Create(PredCommon::PIPE_NAME))
         {
@@ -65,7 +63,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         }
         LogInfo("[Payload] Pipe created.");
 
-        // 4) Create and set the ready event
+        // Create and set the ready event
         LogInfo("[Payload] Creating ready event...");
         SECURITY_DESCRIPTOR sd;
         InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
@@ -86,7 +84,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         SetEvent(readyEvent); // Signal we're ready
         LogInfo("[Payload] Ready event set");
 
-        // 5) Wait for client connection
+        // Wait for client connection
         LogInfo("[Payload] Waiting for client...");
         if (!g_PipeServer.WaitForClient(5000)) // 5 second timeout
         {
@@ -99,7 +97,7 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         SetLoggerPipe(&g_PipeServer);
         LogInfo("[Payload] Pipe connection established for logging");
 
-        // 6) Initialize WebSocket server
+        // Initialize WebSocket server
         LogInfo("[Payload] Starting WebSocket server...");
         g_WebSocketServer = std::make_shared<WebSocketServer>();
         if (!g_WebSocketServer->Start())
@@ -114,23 +112,23 @@ DWORD WINAPI PayloadWorkerThread(LPVOID /*lpParam*/)
         g_GameStateManager = std::make_unique<GameStateManager>();
         LogInfo("[Payload] Game State Manager initialized");
 
-        // 7) Initialize engine access
+        // Initialize engine access
         LogInfo("[Payload] Initializing engine access...");
         UWorld* world = UWorld::GetWorld();
         UGameEngine* gameEngine = UGameEngine::GetEngine();
         LogInfo("[Payload] UWorld at 0x%p", world);
         LogInfo("[Payload] UGameEngine at 0x%p", gameEngine);
 
-        // 8) Install hooks
+        // Install hooks
         LogInfo("[Payload] Installing hooks...");
         InstallHooks();
         LogInfo("[Payload] Hooks installation complete");
 
-        // 9) Main loop
+        // Main loop
         LogInfo("[Payload] Entering main loop");
         MainLoop();
 
-        // 10) Cleanup
+        // Cleanup
         LogInfo("[Payload] Beginning cleanup...");
         CloseHandle(readyEvent);
         CleanupAndExit();
@@ -176,7 +174,8 @@ static void MainLoop()
             break;
         }
 
-        if (g_GameStateManager) {
+        if (g_GameStateManager)
+        {
             g_GameStateManager->Update();
         }
 
@@ -251,14 +250,11 @@ static BOOL WINAPI ConsoleHandler(DWORD ctrlType)
     case CTRL_BREAK_EVENT:
     case CTRL_LOGOFF_EVENT:
     case CTRL_SHUTDOWN_EVENT:
-        // Initiate graceful shutdown
         g_Running = false;
         g_Unloading = true;
 
-    // Give the main loop a little time to exit gracefully
         Sleep(500);
 
-    // Force cleanup if needed
         CleanupAndExit();
         return TRUE;
     default:

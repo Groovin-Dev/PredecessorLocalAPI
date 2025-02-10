@@ -1,11 +1,11 @@
 #include "NamedPipeServer.h"
-#include <iostream>  // Optional for debugging
+#include <iostream>
 
 namespace PredCommon
 {
     NamedPipeServer::NamedPipeServer()
         : m_Pipe(INVALID_HANDLE_VALUE),
-        m_Disconnecting(false)
+          m_Disconnecting(false)
     {
     }
 
@@ -21,10 +21,10 @@ namespace PredCommon
             pipeName,
             PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-            1,               // max instances
-            4096,            // out buffer size
-            4096,            // in buffer size
-            0,               // default timeout
+            1, // max instances
+            4096, // out buffer size
+            4096, // in buffer size
+            0, // default timeout
             nullptr
         );
 
@@ -43,7 +43,7 @@ namespace PredCommon
             return false;
 
         // Use ConnectNamedPipe with overlapped I/O for timeout support
-        OVERLAPPED ovl = { 0 };
+        OVERLAPPED ovl = {0};
         ovl.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
         if (!ovl.hEvent)
             return false;
@@ -78,8 +78,9 @@ namespace PredCommon
 
     void NamedPipeServer::Disconnect()
     {
-        if (m_Disconnecting.exchange(true)) {
-            return; // already disconnecting
+        if (m_Disconnecting.exchange(true))
+        {
+            return;
         }
 
         if (m_Pipe != INVALID_HANDLE_VALUE)
@@ -107,7 +108,7 @@ namespace PredCommon
 
         struct PacketHeader
         {
-            uint8_t  msgType;
+            uint8_t msgType;
             uint32_t length;
         } header;
 

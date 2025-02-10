@@ -1,7 +1,6 @@
 #include <Windows.h>
 #include <atomic>
 
-// Forward-declare our worker thread function
 DWORD WINAPI PayloadWorkerThread(LPVOID lpParam);
 
 // Global flags
@@ -23,7 +22,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID /*lpRese
         break;
 
     case DLL_PROCESS_DETACH:
-        // If we haven't already triggered an unload, do minimal
         if (!g_Unloading)
         {
             g_Unloading = true;

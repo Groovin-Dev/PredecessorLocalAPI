@@ -22,7 +22,6 @@ static DWORD FindProcessId(const std::string& processName)
         {
             do
             {
-                // Convert wide string (szExeFile) to std::string
                 std::wstring wExeFile(pe.szExeFile);
                 std::string exeFile(wExeFile.begin(), wExeFile.end());
 
@@ -31,7 +30,8 @@ static DWORD FindProcessId(const std::string& processName)
                     pid = pe.th32ProcessID;
                     break;
                 }
-            } while (Process32Next(snap, &pe));
+            }
+            while (Process32Next(snap, &pe));
         }
         CloseHandle(snap);
     }
@@ -40,30 +40,31 @@ static DWORD FindProcessId(const std::string& processName)
 
 Loader::Loader()
     : m_TargetProcessName("PredecessorClient-Win64-Shipping.exe"),
-    m_PayloadDllName("PredPayload.dll"),
-    m_TargetPID(0),
-    m_Running(true)
+      m_PayloadDllName("PredPayload.dll"),
+      m_TargetPID(0),
+      m_Running(true)
 {
 }
 
 Loader::~Loader()
-{ }
+{
+}
 
 bool Loader::Init()
 {
     std::cout << "[Loader] Initializing...\n";
 
-    // Step 1: Find process & inject
+    // Find process & inject
     if (!FindAndInject())
     {
         std::cerr << "[Loader] Injection failed or process not found.\n";
         return false;
     }
 
-    // 1.a Wait a little (Just so the payload actually has time to setup)
+    // Wait a little (Just so the payload actually has time to setup)
     Sleep(500);
 
-    // Step 2: Connect to named pipe
+    // Connect to named pipe
     if (!ConnectToPayloadServer())
     {
         std::cerr << "[Loader] Could not connect to Payload's named pipe.\n";
@@ -86,7 +87,6 @@ bool Loader::FindAndInject()
 
     std::cout << "[Loader] Found PID: " << m_TargetPID << "\n";
 
-    // Inject
     if (!Injector::InjectDLL(m_TargetPID, m_PayloadDllName))
     {
         std::cerr << "[Loader] DLL injection failed.\n";
@@ -100,7 +100,7 @@ bool Loader::FindAndInject()
 bool Loader::ConnectToPayloadServer()
 {
     std::cout << "[Loader] Waiting for payload to initialize...\n";
-    
+
     // Wait for payload to signal it's ready
     HANDLE readyEvent = OpenEventA(SYNCHRONIZE, FALSE, "Global\\PredecessorPayloadReady");
     if (!readyEvent)
@@ -120,12 +120,12 @@ bool Loader::ConnectToPayloadServer()
 
     std::cout << "[Loader] Payload is ready. Connecting to pipe...\n";
 
-    const int maxAttempts = 10;
+    constexpr int maxAttempts = 10;
     int attempts = 0;
 
     while (attempts < maxAttempts)
     {
-        if (m_PipeClient.Connect(PredCommon::PIPE_NAME))
+        if (m_PipeClient.Connect(PIPE_NAME))
         {
             std::cout << "[Loader] Connected to payload's pipe!\n";
             return true;
@@ -147,9 +147,9 @@ void Loader::RunLoop()
     while (m_Running)
     {
         // Read and display messages from the payload
-        PredCommon::MessageType msgType;
+        MessageType msgType;
         std::string msgText;
-        
+
         if (!m_PipeClient.ReadMessage(msgType, msgText))
         {
             DWORD error = GetLastError();

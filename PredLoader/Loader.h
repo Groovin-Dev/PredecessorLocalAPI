@@ -19,7 +19,6 @@ private:
     bool FindAndInject();
     bool ConnectToPayloadServer();
 
-private:
     std::string m_TargetProcessName;
     std::string m_PayloadDllName;
     unsigned long m_TargetPID;

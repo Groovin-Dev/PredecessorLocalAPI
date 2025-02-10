@@ -20,7 +20,7 @@ namespace PredCommon
         bool Connect(const char* pipeName);
         bool IsConnected() const;
         void Disconnect();
-        
+
         // Only keep the read functionality
         bool ReadMessage(MessageType& outType, std::string& outText);
 

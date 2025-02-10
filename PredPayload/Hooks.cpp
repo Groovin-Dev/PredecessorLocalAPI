@@ -43,7 +43,7 @@ bool OnTryBuyItem(UObject* Object, UFunction* Function, void* Parms)
             g_WebSocketServer->BroadcastEvent("purchase_attempt", data);
         }
     }
-    return true; // proceed
+    return true;
 }
 
 void InstallHooks()
@@ -56,7 +56,6 @@ void InstallHooks()
 
 void RemoveHooks()
 {
-    // If you want to explicitly remove hooks or restore them, do so here
     KPE::Disable();
     LogInfo("Hooks removed.");
 }

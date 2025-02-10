@@ -12,17 +12,20 @@ GameStateManager::GameStateManager()
 
 bool GameStateManager::Update()
 {
-    if (!g_WebSocketServer) {
+    if (!g_WebSocketServer)
+    {
         LogWarning("[GameState] WebSocket server not available");
         return false;
     }
 
-    try {
+    try
+    {
         const json gameState = GetCurrentGameState();
         g_WebSocketServer->BroadcastEvent("game_state", gameState);
         return true;
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         LogError("[GameState] Error updating game state: %s", e.what());
         return false;
     }
@@ -34,15 +37,18 @@ json GameStateManager::GetCurrentGameState()
         {"players", json::array()}
     };
 
-    try {
+    try
+    {
         const SDK::UWorld* world = SDK::UWorld::GetWorld();
-        if (!world) {
+        if (!world)
+        {
             LogWarning("[GameState] Failed to get World");
             return gameState;
         }
 
         const auto gameMode = world->AuthorityGameMode;
-        if (!gameMode) {
+        if (!gameMode)
+        {
             LogWarning("[GameState] Failed to get gameMode");
             return gameState;
         }
@@ -50,18 +56,22 @@ json GameStateManager::GetCurrentGameState()
         LogDebug("[GameState] gameMode full name: %s", gameMode->GetFullName().c_str());
 
         const auto predGameState = static_cast<SDK::APredGameState*>(world->GameState);
-        if (!predGameState) {
+        if (!predGameState)
+        {
             LogWarning("[GameState] Failed to get PredGameState");
             return gameState;
         }
 
-        const auto predGameComponent = static_cast<SDK::UPredGameStateGameComponent*>(predGameState->PredGameStateComponent);
-        if (!predGameComponent) {
+        const auto predGameComponent = static_cast<SDK::UPredGameStateGameComponent*>(predGameState->
+            PredGameStateComponent);
+        if (!predGameComponent)
+        {
             LogWarning("[GameState] Failed to get PredGameStateComponent");
             return gameState;
         }
 
-        if (!predGameComponent->GameTime) {
+        if (!predGameComponent->GameTime)
+        {
             LogWarning("[GameState] Failed to get GameTime. Probably not in game");
             return gameState;
         }
@@ -72,10 +82,13 @@ json GameStateManager::GetCurrentGameState()
         LogDebug("[GameState] Game Time: %s", gameTime.c_str());
         LogDebug("[GameState] Size of all heroes: %d", predGameComponent->AllHeroes.Num());
 
-        for (int32_t i = 0; i < predGameComponent->AllHeroes.Num(); i++) {
-            try {
+        for (int32_t i = 0; i < predGameComponent->AllHeroes.Num(); i++)
+        {
+            try
+            {
                 const auto character = static_cast<SDK::APredCharacter*>(predGameComponent->AllHeroes[i]);
-                if (!character) {
+                if (!character)
+                {
                     LogWarning("[GameState] Invalid hero at index %d", i);
                     continue;
                 }
@@ -83,13 +96,14 @@ json GameStateManager::GetCurrentGameState()
                 json playerData = GetPlayerState(character);
                 gameState["players"].push_back(playerData);
             }
-            catch (const std::exception& e) {
+            catch (const std::exception& e)
+            {
                 LogError("[GameState] Error processing hero at index %d: %s", i, e.what());
-                continue;
             }
         }
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         LogError("[GameState] Error retrieving current game state: %s", e.what());
     }
 
@@ -109,31 +123,39 @@ json GameStateManager::GetPlayerState(SDK::APredCharacter* character)
         {"minion_kills", 0},
         {"bounty", 0},
         {"inventory", json::array()},
-        {"spells", {
-            {"flash_ready", false},
-            {"ultimate", {
-                {"ultimate_unlocked", false},
-                {"ultimate_ready", false}
-            }}
-        }}
+        {
+            "spells", {
+                {"flash_ready", false},
+                {
+                    "ultimate", {
+                        {"ultimate_unlocked", false},
+                        {"ultimate_ready", false}
+                    }
+                }
+            }
+        }
     };
 
-    if (!character) {
+    if (!character)
+    {
         LogWarning("[GameState] Null hero passed to GetPlayerState");
         return playerData;
     }
 
-    try {
-        const auto playerState = static_cast<SDK::ABasePlayerState*>(character->PredPlayerState);
-        if (!playerState) {
+    try
+    {
+        const auto playerState = character->PredPlayerState;
+        if (!playerState)
+        {
             LogWarning("[GameState] No player state found for hero");
             return playerData;
         }
 
         SDK::UPredAttributeSet_Progression* attributeSet = character->AttributeSet_Progression;
-        if (!attributeSet) {
-            LogWarning("[GameState] No progression attribute set found for player %s", 
-                playerState->PlayerNamePrivate.ToString().c_str());
+        if (!attributeSet)
+        {
+            LogWarning("[GameState] No progression attribute set found for player %s",
+                       playerState->PlayerNamePrivate.ToString().c_str());
             return playerData;
         }
 
@@ -147,20 +169,23 @@ json GameStateManager::GetPlayerState(SDK::APredCharacter* character)
         playerData["minion_kills"] = playerState->MinionKills;
         playerData["bounty"] = playerState->CurrentBounty;
 
-        if (playerState->InventoryComponent) {
+        if (playerState->InventoryComponent)
+        {
             playerData["inventory"] = GetPlayerItems(playerState->InventoryComponent);
         }
-        else {
-            LogWarning("[GameState] Player %s has no inventory component", 
-                playerState->PlayerNamePrivate.ToString().c_str());
+        else
+        {
+            LogWarning("[GameState] Player %s has no inventory component",
+                       playerState->PlayerNamePrivate.ToString().c_str());
         }
 
-        if (playerState->bIsUltimateUnlocked) {
+        if (playerState->bIsUltimateUnlocked)
+        {
             playerData["spells"]["ultimate"]["ultimate_unlocked"] = true;
         }
-
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         LogError("[GameState] Error getting player state: %s", e.what());
     }
 
@@ -171,29 +196,35 @@ json GameStateManager::GetPlayerItems(SDK::UPredInventoryComponent* inventoryCom
 {
     json items = json::array();
 
-    if (!inventoryComponent) {
+    if (!inventoryComponent)
+    {
         LogWarning("[GameState] Null inventory component passed to GetPlayerItems");
         return items;
     }
 
-    try {
+    try
+    {
         for (const auto& inventorySlot : inventoryComponent->Inventory)
         {
-            if (!inventorySlot.SlottedItem.Item) {
+            if (!inventorySlot.SlottedItem.Item)
+            {
                 continue;
             }
 
             items.push_back({
                 {"slot_id", inventorySlot.SlotID},
                 {"slot_type", GetItemSlotTypeString(inventorySlot.SlotType)},
-                {"item", {
-                    {"item_id", inventorySlot.SlottedItem.Item->ItemId},
-                    {"item_name", inventorySlot.SlottedItem.Item->ItemName.ToString()},
-                }}
+                {
+                    "item", {
+                        {"item_id", inventorySlot.SlottedItem.Item->ItemId},
+                        {"item_name", inventorySlot.SlottedItem.Item->ItemName.ToString()},
+                    }
+                }
             });
         }
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         LogError("[GameState] Error processing inventory items: %s", e.what());
     }
 
@@ -202,18 +233,20 @@ json GameStateManager::GetPlayerItems(SDK::UPredInventoryComponent* inventoryCom
 
 std::string GameStateManager::GetItemSlotTypeString(SDK::EPredItemSlotType slotType)
 {
-    try {
+    try
+    {
         switch (slotType)
         {
-            case SDK::EPredItemSlotType::Passive: return "Passive";
-            case SDK::EPredItemSlotType::Active: return "Active";
-            case SDK::EPredItemSlotType::Crest: return "Crest";
-            case SDK::EPredItemSlotType::Trinket: return "Trinket";
-            case SDK::EPredItemSlotType::EPredItemSlotType_MAX: return "Max";
-            default: return "Unknown";
+        case SDK::EPredItemSlotType::Passive: return "Passive";
+        case SDK::EPredItemSlotType::Active: return "Active";
+        case SDK::EPredItemSlotType::Crest: return "Crest";
+        case SDK::EPredItemSlotType::Trinket: return "Trinket";
+        case SDK::EPredItemSlotType::EPredItemSlotType_MAX: return "Max";
+        default: return "Unknown";
         }
     }
-    catch (...) {
+    catch (...)
+    {
         LogError("[GameState] Error converting slot type to string");
         return "Error";
     }
