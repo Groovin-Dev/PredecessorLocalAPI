@@ -1,0 +1,3 @@
+[submodule "PredPayload/KPE_HookLib"]
+	path = PredPayload/KPE_HookLib
+	url = https://github.com/RoeanAigis/KPE_HookLib.git
